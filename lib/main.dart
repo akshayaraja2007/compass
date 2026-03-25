@@ -11,10 +11,9 @@ class PiratesCompassApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(),
-      home: const CompassPage(),
+      home: CompassPage(),
     );
   }
 }
@@ -28,7 +27,7 @@ class CompassPage extends StatefulWidget {
 
 class _CompassPageState extends State<CompassPage>
     with SingleTickerProviderStateMixin {
-  
+
   double angle = 180;
   double target = 180;
   double velocity = 0;
@@ -37,41 +36,67 @@ class _CompassPageState extends State<CompassPage>
   late Ticker ticker;
   final rng = Random();
 
+  double noiseTime = 0;
+  double microJitter = 0;
+
   @override
   void initState() {
     super.initState();
+
     ticker = createTicker((_) {
-      // THE WOBBLE PHYSICS
-      // Tension/Force towards target
-      final force = (target - angle) * 0.06; 
+      // SPRING FORCE
+      final force = (target - angle) * 0.04;
       velocity += force;
-      
-      // Friction (lower makes it wobble longer)
-      velocity *= 0.88; 
 
-      // Small random "jitters" to simulate Jack's unstable compass
-      if ((target - angle).abs() < 10) {
-        velocity += (rng.nextDouble() - 0.5) * 0.5;
-      }
+      // DAMPING
+      velocity *= 0.93;
 
-      angle += velocity;
+      // TIME EVOLUTION
+      noiseTime += 0.04;
+
+      // 🔥 MULTI-LAYER WOBBLE
+
+      // Slow drifting instability
+      double drift = sin(noiseTime * 0.6) * 1.5;
+
+      // Fluid oscillation
+      double fluid = cos(noiseTime * 1.7) * 1.0;
+
+      // Micro random jitter
+      microJitter += (rng.nextDouble() - 0.5) * 0.6;
+      microJitter *= 0.85;
+
+      // Rare sudden twitch
+      double twitch = (rng.nextDouble() < 0.03)
+          ? (rng.nextDouble() - 0.5) * 10
+          : 0;
+
+      // Extra instability when near target
+      double proximity = (target - angle).abs();
+      double instability = proximity < 20
+          ? (rng.nextDouble() - 0.5) * 1.5
+          : 0;
+
+      // FINAL MOTION
+      angle += velocity + drift + fluid + microJitter + twitch + instability;
+
+      // Prevent overflow (important for long runtime)
+      angle = angle % 360;
 
       if (mounted) setState(() {});
     });
+
     ticker.start();
   }
 
   void spin() {
-    // Standard random directions
     final list = includeNorth
         ? [0, 45, 90, 135, 180, 225, 270, 315]
         : [45, 90, 135, 180, 225, 270, 315];
 
-    // Select a random stop
     final rand = list[rng.nextInt(list.length)];
-    
-    // Logic for many spins before settling
-    target = rand + ((rng.nextInt(5) + 4) * 360);
+
+    target = rand + ((rng.nextInt(5) + 3) * 360);
   }
 
   @override
@@ -89,8 +114,6 @@ class _CompassPageState extends State<CompassPage>
         decoration: const BoxDecoration(
           gradient: RadialGradient(
             colors: [Color(0xFF2B1B12), Color(0xFF0F0A07)],
-            center: Alignment.center,
-            radius: 1.0,
           ),
         ),
         child: Column(
@@ -103,18 +126,17 @@ class _CompassPageState extends State<CompassPage>
                 letterSpacing: 8,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFFD4AF37),
-                shadows: [Shadow(color: Colors.black, blurRadius: 10)],
               ),
             ),
             const SizedBox(height: 50),
 
-            // MAIN COMPASS BOX
             GestureDetector(
               onTap: spin,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Outer Square Box (3D Wood Look)
+
+                  // WOOD FRAME
                   Container(
                     width: 280,
                     height: 280,
@@ -124,32 +146,26 @@ class _CompassPageState extends State<CompassPage>
                       boxShadow: const [
                         BoxShadow(color: Colors.black, blurRadius: 30, offset: Offset(15, 15))
                       ],
-                      gradient: LinearGradient(
-                        colors: [Colors.brown.shade900, Colors.black],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      border: Border.all(color: const Color(0xFF2D1B0D), width: 10),
                     ),
                   ),
 
-                  // The Golden Dial (Bezel)
+                  // BRASS RING
                   Container(
                     width: 240,
                     height: 240,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF8B7500), width: 2),
-                      gradient: const SweepGradient(
-                        colors: [Color(0xFFD4AF37), Color(0xFF8B7500), Color(0xFFD4AF37)],
+                      gradient: SweepGradient(
+                        colors: [
+                          Color(0xFFD4AF37),
+                          Color(0xFF8B7500),
+                          Color(0xFFD4AF37)
+                        ],
                       ),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black54, blurRadius: 5),
-                      ],
                     ),
                   ),
 
-                  // The Paper/Parchment Face
+                  // FACE
                   Container(
                     width: 220,
                     height: 220,
@@ -159,12 +175,10 @@ class _CompassPageState extends State<CompassPage>
                         colors: [Color(0xFFF3E5AB), Color(0xFFC4A484)],
                       ),
                     ),
-                    child: CustomPaint(
-                      painter: CompassFacePainter(),
-                    ),
+                    child: CustomPaint(painter: CompassFacePainter()),
                   ),
 
-                  // The Wobbly Needle
+                  // NEEDLE
                   Transform.rotate(
                     angle: angle * pi / 180,
                     child: CustomPaint(
@@ -173,14 +187,13 @@ class _CompassPageState extends State<CompassPage>
                     ),
                   ),
 
-                  // Center Pin
+                  // CENTER
                   Container(
                     width: 12,
                     height: 12,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.black,
-                      boxShadow: [BoxShadow(color: Colors.white24, blurRadius: 2)],
                     ),
                   ),
                 ],
@@ -189,25 +202,10 @@ class _CompassPageState extends State<CompassPage>
 
             const SizedBox(height: 80),
 
-            // Bottom Switch Logic
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 40),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.white10),
-              ),
-              child: SwitchListTile(
-                title: const Text(
-                  "POINT TO NORTH?",
-                  style: TextStyle(color: Color(0xFFC4A484), fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text("OR WHAT YOU WANT MOST...", style: TextStyle(fontSize: 10)),
-                activeColor: const Color(0xFFD4AF37),
-                value: includeNorth,
-                onChanged: (v) => setState(() => includeNorth = v),
-              ),
+            SwitchListTile(
+              title: const Text("POINT TO NORTH?"),
+              value: includeNorth,
+              onChanged: (v) => setState(() => includeNorth = v),
             ),
           ],
         ),
@@ -222,27 +220,12 @@ class CompassFacePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final paint = Paint()
       ..color = Colors.black.withOpacity(0.4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
+      ..style = PaintingStyle.stroke;
 
-    // Draw Ornate Grid Lines
     for (int i = 0; i < 16; i++) {
       double r = (i * 22.5) * pi / 180;
-      double length = i % 4 == 0 ? 100.0 : 85.0;
-      canvas.drawLine(center, center + Offset(cos(r) * length, sin(r) * length), paint);
+      canvas.drawLine(center, center + Offset(cos(r) * 90, sin(r) * 90), paint);
     }
-
-    const textStyle = TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold);
-    _drawText(canvas, "N", center + const Offset(0, -90), textStyle);
-    _drawText(canvas, "S", center + const Offset(0, 90), textStyle);
-    _drawText(canvas, "E", center + const Offset(90, 0), textStyle);
-    _drawText(canvas, "W", center + const Offset(-90, 0), textStyle);
-  }
-
-  void _drawText(Canvas canvas, String text, Offset offset, TextStyle style) {
-    final tp = TextPainter(textDirection: TextDirection.ltr, text: TextSpan(text: text, style: style));
-    tp.layout();
-    tp.paint(canvas, offset - Offset(tp.width / 2, tp.height / 2));
   }
 
   @override
@@ -252,34 +235,24 @@ class CompassFacePainter extends CustomPainter {
 class NeedlePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final shadowPaint = Paint()..color = Colors.black38..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    final needlePaint = Paint()..color = const Color(0xFF1A1A1A);
-    final tipPaint = Paint()..color = const Color(0xFF8B0000);
+    final c = Offset(size.width / 2, size.height / 2);
 
-    final path = Path();
-    path.moveTo(center.dx, center.dy - 100); // Point
-    path.lineTo(center.dx + 15, center.dy);
-    path.lineTo(center.dx, center.dy + 40);
-    path.lineTo(center.dx - 15, center.dy);
-    path.close();
+    final path = Path()
+      ..moveTo(c.dx, c.dy - 100)
+      ..lineTo(c.dx + 15, c.dy)
+      ..lineTo(c.dx, c.dy + 40)
+      ..lineTo(c.dx - 15, c.dy)
+      ..close();
 
-    // 1. Draw Shadow
-    canvas.save();
-    canvas.translate(6, 6);
-    canvas.drawPath(path, shadowPaint);
-    canvas.restore();
+    canvas.drawPath(path, Paint()..color = Colors.black);
 
-    // 2. Draw Body
-    canvas.drawPath(path, needlePaint);
+    final tip = Path()
+      ..moveTo(c.dx, c.dy - 100)
+      ..lineTo(c.dx + 15, c.dy)
+      ..lineTo(c.dx - 15, c.dy)
+      ..close();
 
-    // 3. Draw North Red Tip (Sharp triangle overlay)
-    final tipPath = Path();
-    tipPath.moveTo(center.dx, center.dy - 100);
-    tipPath.lineTo(center.dx + 15, center.dy);
-    tipPath.lineTo(center.dx - 15, center.dy);
-    tipPath.close();
-    canvas.drawPath(tipPath, tipPaint);
+    canvas.drawPath(tip, Paint()..color = Colors.red);
   }
 
   @override
