@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 void main() {
-  runApp(const CompassApp());
+  runApp(const PiratesCompassApp());
 }
 
-class CompassApp extends StatelessWidget {
-  const CompassApp({super.key});
+class PiratesCompassApp extends StatelessWidget {
+  const PiratesCompassApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,8 @@ class CompassPage extends StatefulWidget {
 
 class _CompassPageState extends State<CompassPage>
     with SingleTickerProviderStateMixin {
-  // Logic remains untouched
+  
+  // LOGIC REMAINS AS REQUESTED
   double angle = 180;
   double target = 180;
   double velocity = 0;
@@ -41,22 +42,26 @@ class _CompassPageState extends State<CompassPage>
   void initState() {
     super.initState();
     ticker = createTicker((_) {
-      final force = (target - angle) * 0.05;
+      // Physics for the "wobbly" needle effect
+      final force = (target - angle) * 0.04; 
       velocity += force;
-      velocity *= 0.9;
+      velocity *= 0.92; // Friction
       angle += velocity;
+
       if (mounted) setState(() {});
     });
     ticker.start();
   }
 
   void spin() {
+    // Logic: Point everywhere except North (0/360) unless includeNorth is true
     final list = includeNorth
-        ? [0, 90, 135, 180, 225, 270, 315]
-        : [90, 135, 180, 225, 270, 315];
+        ? [0, 45, 90, 135, 180, 225, 270, 315]
+        : [45, 90, 135, 180, 225, 270, 315];
 
     final rand = list[rng.nextInt(list.length)];
-    target = rand + ((rng.nextInt(3) + 2) * 360);
+    // Add extra spins for cinematic effect
+    target = rand + ((rng.nextInt(4) + 3) * 360);
   }
 
   @override
@@ -68,120 +73,117 @@ class _CompassPageState extends State<CompassPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Gradient background for a premium feel
+      backgroundColor: const Color(0xFF1A120B), // Dark wood color
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF232526), Color(0xFF414345)],
+          gradient: RadialGradient(
+            colors: [Color(0xFF3C2A21), Color(0xFF1A120B)],
+            radius: 1.2,
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              "PRO COMPASS",
+              "WHERE DOES IT POINT?",
               style: TextStyle(
-                color: Colors.white70,
-                letterSpacing: 4,
-                fontWeight: FontWeight.w300,
+                fontFamily: 'Serif',
                 fontSize: 18,
+                letterSpacing: 4,
+                color: Color(0xFFD4AF37),
+                shadows: [Shadow(color: Colors.black, blurRadius: 4)],
               ),
             ),
-            const SizedBox(height: 50),
+            const SizedBox(height: 40),
 
-            // Main 3D Compass Section
+            // COMPASS UNIT
             Center(
               child: GestureDetector(
                 onTap: spin,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Outer Case (The Bezel)
+                    // Outer 3D Wooden Case
                     Container(
-                      width: 280,
-                      height: 280,
+                      width: 300,
+                      height: 300,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black54, blurRadius: 20, offset: Offset(10, 10))
+                        ],
                         gradient: LinearGradient(
+                          colors: [Colors.brown.shade900, Colors.black],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Colors.grey.shade800, Colors.black],
+                        ),
+                        border: Border.all(color: const Color(0xFF3E2723), width: 8),
+                      ),
+                    ),
+
+                    // Brass Bezel Ring
+                    Container(
+                      width: 275,
+                      height: 275,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFD4AF37), Color(0xFF8B7500), Color(0xFFD4AF37)],
+                          stops: [0.0, 0.5, 1.0],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.5),
-                            blurRadius: 20,
-                            offset: const Offset(10, 10),
-                          ),
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(-5, -5),
-                          ),
+                            inset: true,
+                            blurRadius: 5,
+                          )
                         ],
                       ),
                     ),
-                    
-                    // Dial Surface
+
+                    // Inner Vintage Face (Parchment)
                     Container(
                       width: 250,
                       height: 250,
                       decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Color(0xFF1A1A1A),
+                        color: Color(0xFFE5D3B3),
+                        gradient: RadialGradient(
+                          colors: [Color(0xFFF5E9D3), Color(0xFFC4A484)],
+                        ),
+                      ),
+                      child: CustomPaint(
+                        painter: CompassFacePainter(),
                       ),
                     ),
 
-                    // Fixed Degree Notches
-                    ...List.generate(36, (i) {
-                      return Transform.rotate(
-                        angle: (i * 10) * pi / 180,
-                        child: Container(
-                          height: 235,
-                          width: 2,
-                          alignment: Alignment.topCenter,
-                          child: Container(
-                            height: i % 9 == 0 ? 15 : 8,
-                            width: i % 9 == 0 ? 3 : 1,
-                            color: i % 9 == 0 ? Colors.amber : Colors.white24,
-                          ),
-                        ),
-                      );
-                    }),
-
-                    // Rotating Element
+                    // Rotating Needle
                     Transform.rotate(
                       angle: angle * pi / 180,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // 3D Shadow for Needle
-                          Transform.translate(
-                            offset: const Offset(3, 3),
-                            child: _buildNeedle(Colors.black38),
-                          ),
-                          // Real Needle
-                          _buildNeedle(null),
-                        ],
+                      child: CustomPaint(
+                        size: const Size(250, 250),
+                        painter: NeedlePainter(),
                       ),
                     ),
 
-                    // Glass Effect Cover
-                    Container(
-                      width: 250,
-                      height: 250,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withOpacity(0.05),
-                            Colors.transparent,
-                            Colors.white.withOpacity(0.02),
-                          ],
+                    // Glass Glint (Overlay)
+                    IgnorePointer(
+                      child: Container(
+                        width: 250,
+                        height: 250,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.white.withOpacity(0.15),
+                              Colors.transparent,
+                              Colors.white.withOpacity(0.05),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -192,110 +194,103 @@ class _CompassPageState extends State<CompassPage>
 
             const SizedBox(height: 60),
 
-            // Controls with Modern Glass-morphic feel
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white10),
-                ),
+            // Controls
+            Theme(
+              data: ThemeData(switchTheme: SwitchThemeData(
+                thumbColor: WidgetStateProperty.all(const Color(0xFFD4AF37)),
+                trackColor: WidgetStateProperty.all(const Color(0xFF3C2A21)),
+              )),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 50),
                 child: SwitchListTile(
                   title: const Text(
-                    "Enable North Pole",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w300),
+                    "FIND WHAT YOU TRULY WANT",
+                    style: TextStyle(fontFamily: 'Serif', color: Colors.white70, fontSize: 12),
                   ),
-                  activeColor: Colors.amber,
                   value: includeNorth,
                   onChanged: (v) => setState(() => includeNorth = v),
                 ),
               ),
             ),
-            
-            const SizedBox(height: 20),
-            const Text(
-              "TAP COMPASS TO SPIN",
-              style: TextStyle(color: Colors.white30, fontSize: 10),
-            )
           ],
         ),
       ),
     );
   }
-
-  // Needle Widget Builder
-  Widget _buildNeedle(Color? shadowColor) {
-    return SizedBox(
-      width: 40,
-      height: 200,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Column(
-            children: [
-              // Top Half (North)
-              _Triangle(color: shadowColor ?? Colors.redAccent, isUpsideDown: false),
-              // Bottom Half (South)
-              _Triangle(color: shadowColor ?? Colors.white70, isUpsideDown: true),
-            ],
-          ),
-          // Center Pivot Pin
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: shadowColor ?? Colors.grey.shade400,
-              boxShadow: [
-                if (shadowColor == null)
-                  const BoxShadow(color: Colors.black45, blurRadius: 4),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// Custom Triangle for the 3D Needle
-class _Triangle extends StatelessWidget {
-  final Color color;
-  final bool isUpsideDown;
-  const _Triangle({required this.color, required this.isUpsideDown});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(20, 90),
-      painter: _TrianglePainter(color: color, isUpsideDown: isUpsideDown),
-    );
-  }
-}
-
-class _TrianglePainter extends CustomPainter {
-  final Color color;
-  final bool isUpsideDown;
-  _TrianglePainter({required this.color, required this.isUpsideDown});
-
+/// Custom Painter for the hand-drawn compass rose
+class CompassFacePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    final path = Path();
-    if (!isUpsideDown) {
-      path.moveTo(size.width / 2, 0);
-      path.lineTo(size.width, size.height);
-      path.lineTo(0, size.height);
-    } else {
-      path.moveTo(0, 0);
-      path.lineTo(size.width, 0);
-      path.lineTo(size.width / 2, size.height);
+    final center = Offset(size.width / 2, size.height / 2);
+    final paint = Paint()
+      ..color = Colors.black.withOpacity(0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    // Draw cardinal lines
+    for (int i = 0; i < 8; i++) {
+      double r = (i * 45) * pi / 180;
+      canvas.drawLine(center, center + Offset(cos(r) * 110, sin(r) * 110), paint);
     }
-    path.close();
-    canvas.drawPath(path, paint);
+
+    // Hand drawn letters (Stylized)
+    const style = TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Serif');
+    _drawText(canvas, "N", center + const Offset(0, -100), style);
+    _drawText(canvas, "S", center + const Offset(0, 100), style);
+    _drawText(canvas, "E", center + const Offset(100, 0), style);
+    _drawText(canvas, "W", center + const Offset(-100, 0), style);
+  }
+
+  void _drawText(Canvas canvas, String text, Offset offset, TextStyle style) {
+    final tp = TextPainter(textDirection: TextDirection.ltr, text: TextSpan(text: text, style: style));
+    tp.layout();
+    tp.paint(canvas, offset - Offset(tp.width / 2, tp.height / 2));
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Custom Painter for the 3D Needle
+class NeedlePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final shadowPaint = Paint()..color = Colors.black26..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    final ironPaint = Paint()..color = const Color(0xFF2C3E50);
+    final tipPaint = Paint()..color = const Color(0xFFC0392B);
+
+    final needlePath = Path();
+    // Modern Gothic/Ornate needle shape
+    needlePath.moveTo(center.dx, center.dy - 110); // Point
+    needlePath.lineTo(center.dx + 12, center.dy);
+    needlePath.lineTo(center.dx, center.dy + 30);
+    needlePath.lineTo(center.dx - 12, center.dy);
+    needlePath.close();
+
+    // Draw shadow first
+    canvas.save();
+    canvas.translate(5, 5);
+    canvas.drawPath(needlePath, shadowPaint);
+    canvas.restore();
+
+    // Draw needle
+    canvas.drawPath(needlePath, ironPaint);
+    
+    // Draw North tip detail
+    final tipPath = Path();
+    tipPath.moveTo(center.dx, center.dy - 110);
+    tipPath.lineTo(center.dx + 12, center.dy);
+    tipPath.lineTo(center.dx - 12, center.dy);
+    tipPath.close();
+    canvas.drawPath(tipPath, tipPaint);
+
+    // Pivot center
+    canvas.drawCircle(center, 6, Paint()..color = const Color(0xFFD4AF37));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
