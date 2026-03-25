@@ -1,4 +1,4 @@
-package com.example.temp_app
+package com.example.compass
 
 import io.flutter.embedding.android.FlutterActivity
 

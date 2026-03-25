@@ -7,12 +7,8 @@ plugins {
 
 android {
     namespace = "com.example.compass"
-
-    // 🔒 LOCKED SDK (CRITICAL)
-    compileSdk = 34
-    buildToolsVersion = "34.0.0"
-
-    ndkVersion = "26.1.10909125" // safe default (can keep)
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -20,26 +16,29 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.compass"
-
-        // 🔒 LOCKED VALUES (NO flutter.*)
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = 34
-
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     buildTypes {
         release {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
+
 flutter {
     source = "../.."
 }
