@@ -34,6 +34,8 @@ class _CompassScreenState extends State<CompassScreen>
   double _velocity = 0;
   bool _includeNorth = false;
 
+  final ValueNotifier<double> angleNotifier = ValueNotifier(180);
+
   late final Ticker _ticker;
   final Random _rng = Random();
 
@@ -50,13 +52,14 @@ class _CompassScreenState extends State<CompassScreen>
       _velocity *= damping;
       _angle += _velocity;
 
-      setState(() {});
+      // ONLY update needle (no full UI rebuild)
+      angleNotifier.value = _angle;
     });
 
     _ticker.start();
   }
 
-  /// STRICT RANDOM (NO REAL COMPASS)
+  /// RANDOM COMPASS (NO REAL SENSOR)
   void _spin() {
     final list = _includeNorth
         ? [0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0]
@@ -73,7 +76,6 @@ class _CompassScreenState extends State<CompassScreen>
     setState(() {
       _includeNorth = val;
 
-      // If disabling north while pointing near north → move away
       double current = _angle % 360;
       if (current < 0) current += 360;
 
@@ -86,6 +88,7 @@ class _CompassScreenState extends State<CompassScreen>
   @override
   void dispose() {
     _ticker.dispose();
+    angleNotifier.dispose();
     super.dispose();
   }
 
@@ -106,7 +109,12 @@ class _CompassScreenState extends State<CompassScreen>
 
             GestureDetector(
               onTap: _spin,
-              child: AnimatedCompass(angle: _angle),
+              child: ValueListenableBuilder<double>(
+                valueListenable: angleNotifier,
+                builder: (_, value, __) {
+                  return AnimatedCompass(angle: value);
+                },
+              ),
             ),
 
             const SizedBox(height: 60),
@@ -145,23 +153,23 @@ class AnimatedCompass extends StatelessWidget {
     return Transform(
       alignment: Alignment.center,
       transform: Matrix4.identity()
-        ..setEntry(3, 2, 0.0012)
-        ..rotateX(0.35),
+        ..setEntry(3, 2, 0.001)
+        ..rotateX(0.3),
       child: Stack(
         alignment: Alignment.center,
         children: [
 
-          /// OUTER SHADOW
+          /// OUTER SHADOW (LIGHTWEIGHT)
           Container(
-            width: 310,
-            height: 310,
+            width: 300,
+            height: 300,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.7),
-                  blurRadius: 20,
-                  offset: const Offset(0, 20),
+                  color: Colors.black.withOpacity(0.6),
+                  blurRadius: 12,
+                  offset: const Offset(0, 12),
                 )
               ],
             ),
@@ -169,8 +177,8 @@ class AnimatedCompass extends StatelessWidget {
 
           /// BRASS BODY
           Container(
-            width: 300,
-            height: 300,
+            width: 280,
+            height: 280,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: SweepGradient(
@@ -186,8 +194,8 @@ class AnimatedCompass extends StatelessWidget {
 
           /// FACE
           Container(
-            width: 260,
-            height: 260,
+            width: 240,
+            height: 240,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
@@ -196,10 +204,10 @@ class AnimatedCompass extends StatelessWidget {
             ),
           ),
 
-          /// TICKS
+          /// TICKS (OPTIMIZED)
           SizedBox(
-            width: 260,
-            height: 260,
+            width: 240,
+            height: 240,
             child: Stack(
               children: List.generate(36, (i) {
                 double degree = i * 10;
@@ -208,9 +216,9 @@ class AnimatedCompass extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.topCenter,
                     child: Container(
-                      margin: const EdgeInsets.only(top: 10),
+                      margin: const EdgeInsets.only(top: 8),
                       width: i % 9 == 0 ? 3 : 1,
-                      height: i % 9 == 0 ? 12 : 6,
+                      height: i % 9 == 0 ? 10 : 5,
                       color: Colors.black,
                     ),
                   ),
@@ -225,16 +233,16 @@ class AnimatedCompass extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(width: 4, height: 90, color: Colors.red),
-                Container(width: 4, height: 90, color: Colors.black),
+                Container(width: 3, height: 80, color: Colors.red),
+                Container(width: 3, height: 80, color: Colors.black),
               ],
             ),
           ),
 
-          /// CENTER
+          /// CENTER PIN
           Container(
-            width: 16,
-            height: 16,
+            width: 14,
+            height: 14,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
